@@ -31,12 +31,16 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
-import android.util.DisplayMetrics;   // ADDED
+import android.util.DisplayMetrics;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 
 import java.nio.charset.StandardCharsets;
 
 import com.termux.floatball.FloatBallManager;
-import com.termux.floatball.menu.MenuItem;
 import com.termux.floatball.widget.FloatBallCfg;
 
 
@@ -490,66 +494,49 @@ public class MainActivity extends Activity
 
         FloatBallCfg ballCfg = new FloatBallCfg(
             dpToPx(40),
-            getDrawable(android.R.drawable.ic_menu_manage),
+            createKeyboardIcon(),
             FloatBallCfg.Gravity.RIGHT_CENTER,
             true
         );
         floatBallManager = new FloatBallManager(this, ballCfg);
         floatBallManager.setFloatBallOverOtherApp(true);
-
-        String configJson = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getString(KEY_FLOAT_BALL_CONFIG, "");
-        if (!configJson.isEmpty()) {
-            loadFloatBallConfig(configJson);
-        } else {
-            loadDefaultFloatBallButtons();
-        }
-
-        floatBallManager.buildMenu();
+        floatBallManager.setOnFloatBallClickListener(() -> {
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            intent.putExtra(SettingsActivity.EXTRA_OPEN_PAGE, SettingsActivity.PAGE_FLOATBALL_CONFIGURE);
+            startActivity(intent);
+        });
         floatBallManager.show();
     }
 
-    private void loadDefaultFloatBallButtons() {
-        int[][] buttons = {
-            {KeyEvent.KEYCODE_VOLUME_UP, android.R.drawable.ic_btn_speak_now, 0},
-            {KeyEvent.KEYCODE_VOLUME_DOWN, android.R.drawable.ic_btn_speak_now, 0},
-            {KeyEvent.KEYCODE_POWER, android.R.drawable.ic_lock_power_off, 0},
-            {KeyEvent.KEYCODE_HOME, android.R.drawable.ic_menu_myplaces, 0},
-            {KeyEvent.KEYCODE_BACK, android.R.drawable.ic_menu_directions, 0},
-            {KeyEvent.KEYCODE_MENU, android.R.drawable.ic_menu_more, 0},
-        };
-        for (int[] btn : buttons) {
-            addFloatButton(btn[0], btn[1]);
-        }
-    }
+    private Drawable createKeyboardIcon() {
+        int size = dpToPx(40);
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(0xB0FFFFFF);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(dpToPx(1.5f));
 
-    private void addFloatButton(final int keyCode, int iconRes) {
-        android.graphics.drawable.Drawable d = getDrawable(iconRes);
-        if (d == null) return;
-        floatBallManager.addMenuItem(new MenuItem(d) {
-            @Override
-            public void action() {
-                int scan = KeyCodeMapper.getScanCode(keyCode);
-                if (scan == -1) return;
-                mNative.sendKey(0, scan);
-                try { Thread.sleep(20); } catch (InterruptedException e) {}
-                mNative.sendKey(1, scan);
-            }
-        });
-    }
+        float p = dpToPx(5);
+        float kp = dpToPx(2);
+        float rw = size - 2 * p;
+        float rh = size - 2 * p;
 
-    private void loadFloatBallConfig(String json) {
-        try {
-            org.json.JSONArray arr = new org.json.JSONArray(json);
-            for (int i = 0; i < arr.length(); i++) {
-                org.json.JSONObject obj = arr.getJSONObject(i);
-                int kc = obj.optInt("keycode", -1);
-                int icon = obj.optInt("icon", android.R.drawable.ic_menu_manage);
-                if (kc != -1) addFloatButton(kc, icon);
+        canvas.drawRoundRect(p, p, size - p, size - p, dpToPx(3), dpToPx(3), paint);
+
+        float rowH = (rh - 4 * kp) / 4f;
+        float keyW = (rw - 5 * kp) / 4f;
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 4; col++) {
+                float kx = p + kp + col * (keyW + kp);
+                float ky = p + kp + row * (rowH + kp);
+                canvas.drawRoundRect(kx, ky, kx + keyW, ky + rowH, dpToPx(2), dpToPx(2), paint);
             }
-        } catch (org.json.JSONException e) {
-            loadDefaultFloatBallButtons();
         }
+        float sx = p + kp;
+        float sy = p + kp + 3 * (rowH + kp);
+        canvas.drawRoundRect(sx, sy, sx + keyW * 2 + kp, sy + rowH, dpToPx(2), dpToPx(2), paint);
+        return new BitmapDrawable(getResources(), bitmap);
     }
 
     private boolean mFloatBallVisible = true;

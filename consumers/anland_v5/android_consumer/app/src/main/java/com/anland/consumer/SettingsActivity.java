@@ -65,6 +65,9 @@ public class SettingsActivity extends Activity {
     private static final String KEY_FLOAT_BALL_ENABLED = "float_ball_enabled";
     private static final String KEY_FLOAT_BALL_CONFIG = "float_ball_config";
 
+    public static final String EXTRA_OPEN_PAGE = "open_page";
+    public static final String PAGE_FLOATBALL_CONFIGURE = "floatball_configure";
+
     // Latency presets: target buffer in ms (0 = auto). The user-visible labels live
     // in the R.array.latency_labels string-array, parallel to this array.
     private static final int[] LATENCY_MS = {0, 1, 3, 5, 10, 20};
@@ -106,6 +109,11 @@ public class SettingsActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showHome();
+
+        String openPage = getIntent().getStringExtra(EXTRA_OPEN_PAGE);
+        if (PAGE_FLOATBALL_CONFIGURE.equals(openPage)) {
+            showFloatBallConfigurePage();
+        }
     }
 
     // ============================================================
