@@ -515,7 +515,7 @@ public class MainActivity extends Activity
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setColor(0xB0FFFFFF);
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(dpToPx(1.5f));
+        paint.setStrokeWidth(dpToPx(2));
 
         float p = dpToPx(5);
         float kp = dpToPx(2);
