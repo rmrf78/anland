@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
 import android.provider.Settings;
+import android.net.Uri;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
@@ -513,8 +514,8 @@ public class MainActivity extends Activity
             {KeyEvent.KEYCODE_VOLUME_UP, android.R.drawable.ic_btn_speak_now, 0},
             {KeyEvent.KEYCODE_VOLUME_DOWN, android.R.drawable.ic_btn_speak_now, 0},
             {KeyEvent.KEYCODE_POWER, android.R.drawable.ic_lock_power_off, 0},
-            {KeyEvent.KEYCODE_HOME, android.R.drawable.ic_menu_home, 0},
-            {KeyEvent.KEYCODE_BACK, android.R.drawable.ic_menu_back, 0},
+            {KeyEvent.KEYCODE_HOME, android.R.drawable.ic_menu_myplaces, 0},
+            {KeyEvent.KEYCODE_BACK, android.R.drawable.ic_menu_directions, 0},
             {KeyEvent.KEYCODE_MENU, android.R.drawable.ic_menu_more, 0},
         };
         for (int[] btn : buttons) {
