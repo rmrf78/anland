@@ -30,26 +30,22 @@ jobs:
       - name: Set NDK_DIR environment variable
         run: echo "NDK_DIR=$ANDROID_HOME/ndk/29.0.13113456" >> $GITHUB_ENV
 
-      - name: Generate debug keystore
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           mkdir -p $HOME/.android
-          keytool -genkeypair -v -keystore $HOME/.android/debug.keystore \
-            -storepass android -alias androiddebugkey -keypass android \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug, O=Android, C=US" -noprompt
+          echo "$KEYSTORE_BASE64" | base64 -d > $HOME/.android/debug.keystore
 
       - name: Build APK
         working-directory: consumers/anland_v5/android_consumer
         run: |
           chmod +x gradlew
-          # Pass debug signing as project properties on the command line instead of
-          # appending to the tracked gradle.properties, which would dirty the working
-          # tree and make the git-derived versionName ("...-dirty") wrong on CI.
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file="$HOME/.android/debug.keystore" \
-            -Pandroid.injected.signing.store.password=android \
-            -Pandroid.injected.signing.key.alias=androiddebugkey \
-            -Pandroid.injected.signing.key.password=android
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
           cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/anland-v5.apk
 
       - name: Upload APK
