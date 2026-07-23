@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.anland.consumer">
+
+    <!-- Capture the device microphone to forward to the Linux producer. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Capture the device camera(s) to forward to the Linux producer (Camera2 NDK). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Bring an already-open window's task to the front instead of opening a
+         duplicate when a launch targets a socket that is already on screen. -->
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application
+        android:label="Anland"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+
+        <!-- AccessibilityService: intercept hardware keys (Fn combos, etc.) -->
+        <service
+            android:name=".KeyInterceptor"
+            android:exported="true"
+            android:label="Anland KeyInterceptor"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:enableOnBackInvokedCallback="false"
+            android:screenOrientation="fullUser"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+        <!-- Secondary windows: each launch (with EXTRA_SOCKET_PATH / EXTRA_WINDOW_NAME)
+             opens a new task/window in the same process. documentLaunchMode="always"
+             makes every start a distinct task; empty taskAffinity keeps it out of
+             MainActivity's task. Deliberately not in the launcher. -->
+        <activity
+            android:name=".SecondaryActivity"
+            android:exported="true"
+            android:enableOnBackInvokedCallback="false"
+            android:screenOrientation="fullUser"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:launchMode="standard"
+            android:documentLaunchMode="always"
+            android:resizeableActivity="true"
+            android:taskAffinity="" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true"
+            android:enableOnBackInvokedCallback="false"
+            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

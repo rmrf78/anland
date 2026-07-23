@@ -1,0 +1,6 @@
+id=anland-daemon
+name=Anland Daemon
+version=1.0
+versionCode=1
+author=anland
+description=Display daemon for Anland buffer sharing
