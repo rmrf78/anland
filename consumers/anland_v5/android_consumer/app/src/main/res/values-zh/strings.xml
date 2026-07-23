@@ -116,6 +116,22 @@
         <item>宽松（约 20 毫秒）</item>
     </string-array>
 
+    <!-- FloatBall （虚拟按键） -->
+    <string name="no_display_over_app_permission">您的手机没有授予悬浮窗权限，请开启后再试</string>
+    <string name="open_permission">现在去开启</string>
+    <string name="not_open_permission">暂不开启</string>
+    <string name="apply_permission">进入设置页面失败，请手动设置</string>
+
+    <string name="cat_floatball_title">虚拟按键</string>
+    <string name="cat_floatball_subtitle">带虚拟按键快捷菜单的悬浮球</string>
+    <string name="floatball_switch">启用悬浮虚拟按键</string>
+    <string name="floatball_hint">可拖动的悬浮球，点击展开放射状快捷按键菜单。不操作时自动靠边半透明隐藏。</string>
+    <string name="floatball_configure">配置按键</string>
+    <string name="floatball_configure_title">虚拟按键配置</string>
+    <string name="floatball_configure_hint">以 JSON 编辑按键列表。格式：{\"keycode\": &lt;Android键码&gt;, \"icon\": &lt;图标名称&gt;}</string>
+    <string name="floatball_config_hint">修改后返回桌面界面即可生效。</string>
+    <string name="floatball_import">从文件导入…</string>
+
     <!-- Resolution presets -->
     <string-array name="res_preset_labels">
         <item>预设…</item>

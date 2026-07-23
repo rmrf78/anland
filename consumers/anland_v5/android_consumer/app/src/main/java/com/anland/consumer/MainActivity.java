@@ -10,6 +10,7 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
+import android.provider.Settings;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
@@ -98,6 +99,9 @@ public class MainActivity extends Activity
     private boolean mKeyboardFloating = false;
     // Persistent "tap to open Settings" notification, toggleable in Settings > General.
     private static final String KEY_NOTIFICATION_ENABLED = "settings_notification";
+    static final String KEY_FLOAT_BALL_ENABLED = "float_ball_enabled";
+    private static final String KEY_FLOAT_BALL_CONFIG = "float_ball_config";
+    private static final int REQ_OVERLAY_PERMISSION = 1004;
     // System soft-keyboard bridge: hidden input, text forwarding and toggle.
     private SystemIME systemIme;
     private int mImeBottom = 0;   // last IME bottom inset
@@ -458,6 +462,31 @@ public class MainActivity extends Activity
 
     // ADDED: FloatBall floating virtual buttons
     private void initFloatBall() {
+        boolean enabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(KEY_FLOAT_BALL_ENABLED, true);
+        if (!enabled) return;
+
+        checkOverlayPermission();
+    }
+
+    private void checkOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, REQ_OVERLAY_PERMISSION);
+                return;
+            }
+        }
+        doShowFloatBall();
+    }
+
+    private void doShowFloatBall() {
+        if (floatBallManager != null) {
+            floatBallManager.show();
+            return;
+        }
+
         FloatBallCfg ballCfg = new FloatBallCfg(
             dpToPx(40),
             getDrawable(android.R.drawable.ic_menu_manage),
@@ -465,46 +494,61 @@ public class MainActivity extends Activity
             true
         );
         floatBallManager = new FloatBallManager(this, ballCfg);
-        floatBallManager.setFloatBallOverOtherApp(false);
+        floatBallManager.setFloatBallOverOtherApp(true);
 
-        int[] keyMappings = {
-            KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN,
-            KeyEvent.KEYCODE_POWER, KeyEvent.KEYCODE_HOME,
-            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_CAMERA,
-            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_SEARCH
-        };
-        int[] icons = {
-            android.R.drawable.ic_btn_speak_now,
-            android.R.drawable.ic_btn_speak_now,
-            android.R.drawable.ic_lock_power_off,
-            android.R.drawable.ic_menu_home,
-            android.R.drawable.ic_menu_back,
-            android.R.drawable.ic_menu_camera,
-            android.R.drawable.ic_menu_more,
-            android.R.drawable.ic_menu_search
-        };
-        String[] labels = {
-            "VOL+", "VOL-", "POWER", "HOME", "BACK", "CAMERA", "MENU", "SEARCH"
-        };
-
-        for (int i = 0; i < keyMappings.length; i++) {
-            final int kc = keyMappings[i];
-            int iconRes = icons[i];
-            android.graphics.drawable.Drawable d = getDrawable(iconRes);
-            if (d == null) continue;
-            floatBallManager.addMenuItem(new MenuItem(d) {
-                @Override
-                public void action() {
-                    int scan = KeyCodeMapper.getScanCode(kc);
-                    if (scan == -1) return;
-                    mNative.sendKey(0, scan);
-                    try { Thread.sleep(20); } catch (InterruptedException e) {}
-                    mNative.sendKey(1, scan);
-                }
-            });
+        String configJson = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getString(KEY_FLOAT_BALL_CONFIG, "");
+        if (!configJson.isEmpty()) {
+            loadFloatBallConfig(configJson);
+        } else {
+            loadDefaultFloatBallButtons();
         }
+
         floatBallManager.buildMenu();
         floatBallManager.show();
+    }
+
+    private void loadDefaultFloatBallButtons() {
+        int[][] buttons = {
+            {KeyEvent.KEYCODE_VOLUME_UP, android.R.drawable.ic_btn_speak_now, 0},
+            {KeyEvent.KEYCODE_VOLUME_DOWN, android.R.drawable.ic_btn_speak_now, 0},
+            {KeyEvent.KEYCODE_POWER, android.R.drawable.ic_lock_power_off, 0},
+            {KeyEvent.KEYCODE_HOME, android.R.drawable.ic_menu_home, 0},
+            {KeyEvent.KEYCODE_BACK, android.R.drawable.ic_menu_back, 0},
+            {KeyEvent.KEYCODE_MENU, android.R.drawable.ic_menu_more, 0},
+        };
+        for (int[] btn : buttons) {
+            addFloatButton(btn[0], btn[1]);
+        }
+    }
+
+    private void addFloatButton(final int keyCode, int iconRes) {
+        android.graphics.drawable.Drawable d = getDrawable(iconRes);
+        if (d == null) return;
+        floatBallManager.addMenuItem(new MenuItem(d) {
+            @Override
+            public void action() {
+                int scan = KeyCodeMapper.getScanCode(keyCode);
+                if (scan == -1) return;
+                mNative.sendKey(0, scan);
+                try { Thread.sleep(20); } catch (InterruptedException e) {}
+                mNative.sendKey(1, scan);
+            }
+        });
+    }
+
+    private void loadFloatBallConfig(String json) {
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                org.json.JSONObject obj = arr.getJSONObject(i);
+                int kc = obj.optInt("keycode", -1);
+                int icon = obj.optInt("icon", android.R.drawable.ic_menu_manage);
+                if (kc != -1) addFloatButton(kc, icon);
+            }
+        } catch (org.json.JSONException e) {
+            loadDefaultFloatBallButtons();
+        }
     }
 
     private boolean mFloatBallVisible = true;
@@ -515,7 +559,7 @@ public class MainActivity extends Activity
             floatBallManager.hide();
             mFloatBallVisible = false;
         } else {
-            floatBallManager.show();
+            checkOverlayPermission();
             mFloatBallVisible = true;
         }
     }
@@ -644,7 +688,15 @@ public class MainActivity extends Activity
         }
 
         // Show float-ball on resume
-        if (floatBallManager != null) floatBallManager.show();
+        boolean fbEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(KEY_FLOAT_BALL_ENABLED, true);
+        if (fbEnabled) {
+            if (floatBallManager != null) {
+                floatBallManager.show();
+            } else {
+                doShowFloatBall();
+            }
+        }
 
         // ===== 重新读取触摸板设置 =====
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -763,6 +815,17 @@ public class MainActivity extends Activity
             if (getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .getBoolean(KEY_NOTIFICATION_ENABLED, true)) {
                 showSettingsNotification();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_OVERLAY_PERMISSION) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                    && Settings.canDrawOverlays(this)) {
+                doShowFloatBall();
             }
         }
     }

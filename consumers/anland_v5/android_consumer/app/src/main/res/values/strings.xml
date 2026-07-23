@@ -122,6 +122,16 @@
     <string name="not_open_permission">Not grant permission</string>
     <string name="apply_permission">Failed to enter the settings page, please set it manually</string>
 
+    <string name="cat_floatball_title">Virtual Buttons</string>
+    <string name="cat_floatball_subtitle">Floating ball with virtual key shortcuts</string>
+    <string name="floatball_switch">Enable floating virtual buttons</string>
+    <string name="floatball_hint">A draggable floating ball with a radial menu of virtual key shortcuts. Auto-hides to screen edge after inactivity.</string>
+    <string name="floatball_configure">Configure Buttons</string>
+    <string name="floatball_configure_title">Virtual Buttons Configuration</string>
+    <string name="floatball_configure_hint">Edit the button list as JSON. Each entry: {\"keycode\": &lt;Android keycode&gt;, \"icon\": &lt;icon name&gt;}</string>
+    <string name="floatball_config_hint">Changes take effect next time you return to the desktop.</string>
+    <string name="floatball_import">Import from file…</string>
+
     <!-- Resolution presets -->
     <string-array name="res_preset_labels">
         <item>Preset…</item>

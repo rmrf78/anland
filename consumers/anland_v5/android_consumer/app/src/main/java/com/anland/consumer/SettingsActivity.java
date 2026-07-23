@@ -62,12 +62,15 @@ public class SettingsActivity extends Activity {
     private static final String KEY_TOUCHPAD_MODE = "touchpad_mode";
     private static final String KEY_MOUSE_ACCEL = "mouse_speed";
 
+    private static final String KEY_FLOAT_BALL_ENABLED = "float_ball_enabled";
+    private static final String KEY_FLOAT_BALL_CONFIG = "float_ball_config";
+
     // Latency presets: target buffer in ms (0 = auto). The user-visible labels live
     // in the R.array.latency_labels string-array, parallel to this array.
     private static final int[] LATENCY_MS = {0, 1, 3, 5, 10, 20};
 
     // Which secondary page is on screen. Back returns HOME -> exits the activity.
-    private enum Page { HOME, KEYBOARD, TOUCHPAD, CONNECTION, RESOLUTION, GENERAL }
+    private enum Page { HOME, KEYBOARD, TOUCHPAD, CONNECTION, RESOLUTION, GENERAL, FLOATBALL }
     private Page currentPage = Page.HOME;
 
     private Button bindButton;
@@ -77,7 +80,9 @@ public class SettingsActivity extends Activity {
 
     // Custom extra-keys layout editor (JSON), and the SAF file-picker request code.
     private EditText layoutInput;
+    private EditText floatBallInput;
     private static final int REQ_PICK_LAYOUT = 2001;
+    private static final int REQ_PICK_FLOATBALL = 2002;
 
     // Android keycode → localized name string resource
     private static final SparseIntArray KEY_NAME_RES = new SparseIntArray();
@@ -155,6 +160,8 @@ public class SettingsActivity extends Activity {
             R.string.cat_connection_subtitle, this::showConnectionPage);
         addCategoryRow(root, R.string.section_resolution,
             R.string.cat_resolution_subtitle, this::showResolutionPage);
+        addCategoryRow(root, R.string.cat_floatball_title,
+            R.string.cat_floatball_subtitle, this::showFloatBallPage);
         addCategoryRow(root, R.string.cat_general_title,
             R.string.cat_general_subtitle, this::showGeneralPage);
 
@@ -262,6 +269,130 @@ public class SettingsActivity extends Activity {
         LinearLayout root = newPage(R.string.cat_touchpad_title);
         buildTouchpadSection(root);
         setContent(root);
+    }
+
+    private void showFloatBallPage() {
+        currentPage = Page.FLOATBALL;
+        LinearLayout root = newPage(R.string.cat_floatball_title);
+        buildFloatBallSection(root);
+        setContent(root);
+    }
+
+    private void buildFloatBallSection(LinearLayout root) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
+        Switch fbSwitch = new Switch(this);
+        fbSwitch.setText(R.string.floatball_switch);
+        fbSwitch.setTextSize(14);
+        fbSwitch.setPadding(0, dp(8), 0, 0);
+        fbSwitch.setChecked(prefs.getBoolean(KEY_FLOAT_BALL_ENABLED, true));
+        fbSwitch.setOnCheckedChangeListener((v, checked) ->
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putBoolean(KEY_FLOAT_BALL_ENABLED, checked).apply());
+        root.addView(fbSwitch);
+
+        TextView fbHint = new TextView(this);
+        fbHint.setText(R.string.floatball_hint);
+        fbHint.setTextSize(12);
+        fbHint.setTextColor(Color.GRAY);
+        fbHint.setPadding(0, dp(4), 0, dp(16));
+        root.addView(fbHint);
+
+        Button configBtn = new Button(this);
+        configBtn.setText(R.string.floatball_configure);
+        configBtn.setOnClickListener(v -> showFloatBallConfigurePage());
+        root.addView(configBtn);
+
+        Button importBtn = new Button(this);
+        importBtn.setText(R.string.floatball_import);
+        importBtn.setOnClickListener(v -> pickFloatBallConfig());
+        root.addView(importBtn);
+    }
+
+    private void showFloatBallConfigurePage() {
+        currentPage = Page.FLOATBALL;
+        LinearLayout root = newPage(R.string.floatball_configure_title);
+
+        TextView hint = new TextView(this);
+        hint.setText(R.string.floatball_configure_hint);
+        hint.setTextSize(13);
+        hint.setTextColor(Color.GRAY);
+        hint.setPadding(0, 0, 0, dp(16));
+        root.addView(hint);
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String configJson = prefs.getString(KEY_FLOAT_BALL_CONFIG, "");
+
+        floatBallInput = new EditText(this);
+        floatBallInput.setTypeface(Typeface.MONOSPACE);
+        floatBallInput.setTextSize(12);
+        floatBallInput.setGravity(Gravity.TOP | Gravity.START);
+        floatBallInput.setInputType(InputType.TYPE_CLASS_TEXT
+            | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        floatBallInput.setHorizontallyScrolling(false);
+        floatBallInput.setMinLines(8);
+        floatBallInput.setText(configJson.isEmpty() ? getDefaultFloatBallJson() : configJson);
+        root.addView(floatBallInput);
+
+        floatBallInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putString(KEY_FLOAT_BALL_CONFIG, s.toString()).apply();
+            }
+        });
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button loadDefaultBtn = new Button(this);
+        loadDefaultBtn.setText(R.string.btn_load_default);
+        loadDefaultBtn.setOnClickListener(v -> {
+            if (floatBallInput != null) floatBallInput.setText(getDefaultFloatBallJson());
+        });
+        btnRow.addView(loadDefaultBtn);
+
+        Button loadFileBtn = new Button(this);
+        loadFileBtn.setText(R.string.btn_load_file);
+        loadFileBtn.setOnClickListener(v -> pickFloatBallConfig());
+        btnRow.addView(loadFileBtn);
+
+        root.addView(btnRow);
+
+        TextView configHint = new TextView(this);
+        configHint.setText(R.string.floatball_config_hint);
+        configHint.setTextSize(12);
+        configHint.setTextColor(Color.GRAY);
+        configHint.setPadding(0, dp(8), 0, 0);
+        root.addView(configHint);
+
+        setContent(root);
+    }
+
+    private String getDefaultFloatBallJson() {
+        return "[\n" +
+            "  {\"keycode\": 24, \"icon\": \"volume_up\"},\n" +
+            "  {\"keycode\": 25, \"icon\": \"volume_down\"},\n" +
+            "  {\"keycode\": 26, \"icon\": \"power\"},\n" +
+            "  {\"keycode\": 3, \"icon\": \"home\"},\n" +
+            "  {\"keycode\": 4, \"icon\": \"back\"},\n" +
+            "  {\"keycode\": 82, \"icon\": \"menu\"}\n" +
+            "]";
+    }
+
+    private void pickFloatBallConfig() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES,
+            new String[]{"application/json", "text/plain"});
+        try {
+            startActivityForResult(intent, REQ_PICK_FLOATBALL);
+        } catch (android.content.ActivityNotFoundException e) {
+            Toast.makeText(this, R.string.toast_no_picker, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showConnectionPage() {
@@ -940,8 +1071,7 @@ public class SettingsActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQ_PICK_LAYOUT || resultCode != RESULT_OK || data == null)
-            return;
+        if (resultCode != RESULT_OK || data == null) return;
         Uri uri = data.getData();
         if (uri == null) return;
         String text = readTextFromUri(uri);
@@ -949,8 +1079,13 @@ public class SettingsActivity extends Activity {
             Toast.makeText(this, R.string.toast_read_failed, Toast.LENGTH_SHORT).show();
             return;
         }
-        // setText flows through the editor's TextWatcher, which persists + validates.
-        if (layoutInput != null) layoutInput.setText(text);
+        if (requestCode == REQ_PICK_LAYOUT) {
+            if (layoutInput != null) layoutInput.setText(text);
+        } else if (requestCode == REQ_PICK_FLOATBALL) {
+            if (floatBallInput != null) floatBallInput.setText(text);
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putString(KEY_FLOAT_BALL_CONFIG, text).apply();
+        }
     }
 
     private String readTextFromUri(Uri uri) {
